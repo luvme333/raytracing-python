@@ -11,7 +11,12 @@ global vertexShader
 global fragmentShader
 global program
 global sizeofRGBa32f
+DIFFUSE_REFLECTION = 1
+MIRROR_REFLECTION = 2
+REFRACTION = 3
 sizeofRGBa32f = 34836
+height = 300
+weight = 300
 vertexShaderPath = "raytracing.vert"
 fragmentShaderPath = "raytracing.frag"
 
@@ -40,29 +45,6 @@ def initShaders():
     # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
     glUseProgram(program)
 
-# Процедура перерисовки
-def draw():
-    glClear(GL_COLOR_BUFFER_BIT)                    # Очищаем экран и заливаем серым цветом
-    glEnableClientState(GL_VERTEX_ARRAY)            # Включаем использование массива вершин
-    glEnableClientState(GL_COLOR_ARRAY)             # Включаем использование массива цветов
-    # Указываем, где взять массив верши:
-    # Первый параметр - сколько используется координат на одну вершину
-    # Второй параметр - определяем тип данных для каждой координаты вершины
-    # Третий парметр - определяет смещение между вершинами в массиве
-    # Если вершины идут одна за другой, то смещение 0
-    # Четвертый параметр - указатель на первую координату первой вершины в массиве
-    glVertexPointer(3, GL_FLOAT, 0, pointdata)
-    # Указываем, где взять массив цветов:
-    # Параметры аналогичны, но указывается массив цветов
-    glColorPointer(3, GL_FLOAT, 0, pointcolor)
-    # Рисуем данные массивов за один проход:
-    # Первый параметр - какой тип примитивов использовать (треугольники, точки, линии и др.)
-    # Второй параметр - начальный индекс в указанных массивах
-    # Третий параметр - количество рисуемых объектов (в нашем случае это 3 вершины - 9 координат)
-    glDrawArrays(GL_TRIANGLES, 0, 3)
-    glDisableClientState(GL_VERTEX_ARRAY)           # Отключаем использование массива вершин
-    glDisableClientState(GL_COLOR_ARRAY)            # Отключаем использование массива цветов
-    glutSwapBuffers()                               # Выводим все нарисованное в памяти на экран
 
 def init():
     glEnable(GL_COLOR_MATERIAL)
@@ -187,16 +169,16 @@ def fillTriangleArrays(points, indexes):
     indexes[12][3] = 6
 
 def initSpheres(spheres):
-    spheres[0] [0] = -1
-    spheres[0] [1] = -1
-    spheres[0] [2] = -2
-    spheres[0] [3] = 2
-    spheres[1] [0] = 2
-    spheres[1] [1] = 1
-    spheres[1] [2] = 2
-    spheres[1] [3] = 1
+    spheres[0][0] = -1
+    spheres[0][1] = -1
+    spheres[0][2] = -2
+    spheres[0][3] = 2
+    spheres[1][0] = 2
+    spheres[1][1] = 1
+    spheres[1][2] = 2
+    spheres[1][3] = 1
 
-def setVec4BufferAsImage(array, bufferUsageHint, unit):
+def setVec4BufferAsImage(array, unit):
     ptr = array.index(0)
     buf = glGenBuffers()
     glBindBuffer(GL_TEXTURE_BUFFER, buf)
@@ -218,34 +200,106 @@ def initSceneBuffers():
     setVec4BufferAsImage(indexes, GL_STATIC_DRAW, 3)
     setVec4BufferAsImage(spheres, GL_STATIC_DRAW, 4)
 
-# Здесь начинется выполнение программы
-# Использовать двойную буферезацию и цвета в формате RGB (Красный Синий Зеленый)
-glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
-# Указываем начальный размер окна (ширина, высота)
-glutInitWindowSize(300, 300)
-# Указываем начальное
-# положение окна относительно левого верхнего угла экрана
-glutInitWindowPosition(50, 50)
-# Инициализация OpenGl
-glutInit(sys.argv)
-# Создаем окно с заголовком
-glutCreateWindow("Raytracing")
-init()
-# Определяем процедуру, отвечающую за перерисовку
-glutDisplayFunc(draw)
-# Определяем процедуру, выполняющуюся при "простое" программы
-glutIdleFunc(draw)
-# Задаем серый цвет для очистки экрана
-glClearColor(0.2, 0.2, 0.2, 1)
-# Создаем вершинный шейдер:
-# Положение вершин не меняется
-# Цвет вершины - такой же как и в массиве цветов
-initShaders()
+def fillMaterials():
+    material = [[] for i in range(6)]
+    lightCoefs = [0.4, 0.9, 0.2, 2.0]
 
-# Определяем массив вершин (три вершины по три координаты)
-pointdata = [[0, 0.5, 0], [-0.5, -0.5, 0], [0.5, -0.5, 0]]
-# Определяем массив цветов (по одному цвету для каждой вершины)
-pointcolor = [[1, 1, 0], [0, 1, 1], [1, 0, 1]]
-# Запускаем основной цикл
-#print(glGetProgramInfoLog(program))
-glutMainLoop()
+    material[0].append([0, 1, 0])
+    material[0].append(lightCoefs)
+    material[0].append(0.5)
+    material[0].append(1)
+    material[0].append(DIFFUSE_REFLECTION)
+
+    material[1].append([0, 0, 1])
+    material[1].append(lightCoefs)
+    material[1].append(0.5)
+    material[1].append(1)
+    material[1].append(DIFFUSE_REFLECTION)
+
+    material[2].append([0, 0.1, 0.8])
+    material[2].append(lightCoefs)
+    material[2].append(0.5)
+    material[2].append(1)
+    material[2].append(DIFFUSE_REFLECTION)
+
+    material[3].append([1, 0, 0])
+    material[3].append(lightCoefs)
+    material[3].append(0.5)
+    material[3].append(1)
+    material[3].append(DIFFUSE_REFLECTION)
+
+    material[4].append([1, 1, 1])
+    material[4].append(lightCoefs)
+    material[4].append(0.5)
+    material[4].append(1)
+    material[4].append(DIFFUSE_REFLECTION)
+
+    material[5].append([0, 1, 1])
+    material[5].append(lightCoefs)
+    material[5].append(0.5)
+    material[5].append(1)
+    material[5].append(DIFFUSE_REFLECTION)
+
+    material[6].append([0, 1, 1])
+    material[6].append([0.4, 0.9, 0.9, 50.0])
+    material[6].append(0.8)
+    material[6].append(1.5)
+    material[6].append(REFRACTION)
+
+    return material
+
+def initMaterials():
+    material = fillMaterials()
+    for i in range(len(material)):
+        location = glGetUniformLocation(program, "uMaterials[", i, "].Color")
+        glUniform3f(location, material[i][0])
+        location = glGetUniformLocation(program, "uMaterials[", i, "].LightCoeffs")
+        glUniform4f(location, material[i][1])
+        location = glGetUniformLocation(program, "uMaterials[", i, "].ReflectionCoef")
+        glUniform1f(location, material[i][2])
+        location = glGetUniformLocation(program, "uMaterials[", i, "].RefractionCoef")
+        glUniform1f(location, material[i][3])
+        location = glGetUniformLocation(program, "uMaterials[", i, "].MaterialType")
+        glUniform1f(location, material[i][4])
+
+# Процедура перерисовки
+def draw():
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    init()
+    initShaders()
+    initMaterials()
+    initSceneBuffers()
+    location = glGetUniformLocation(program, "uCamera.Position")
+    glUniform3f(location, (0, 0, -7.5))
+    location = glGetUniformLocation(program, "uCamera.Up")
+    glUniform3f(location, (0, 1, 0))
+    location = glGetUniformLocation(program, "uCamera.Side")
+    glUniform3f(location, (1, 0, 0))
+    location = glGetUniformLocation(program, "uCamera.View")
+    glUniform3f(location, (0, 0, 1))
+    location = glGetUniformLocation(program, "uCamera.Scale")
+    glUniform2f(location, (1, height / weight))
+    location = glGetUniformLocation(program, "uLight.Position")
+    glUniform3f(location, (2.0, 0.0, -4.0))
+
+    glColor3b(0, 0, 0)
+    glBegin(GL_QUADS)
+
+    glTexCoord2f(0, 1)
+    glVertex2f(-1, -1)
+
+    glTexCoord2f(1, 1)
+    glVertex2f(1, -1)
+
+    glTexCoord2f(1, 0)
+    glVertex2f(1, 1)
+
+    glTexCoord2f(0, 0)
+    glVertex2f(-1, 1)
+
+    glEnd()
+    glutSwapBuffers()
+    glUseProgram(0)
+
+# Здесь начинется выполнение программы
+draw()
