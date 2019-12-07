@@ -1,5 +1,8 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
+import numpy as np
+
+
 from OpenGL.version import *
 import chardet
 import sys
@@ -20,6 +23,15 @@ height = 300
 weight = 300
 vertexShaderPath = "raytracing.vert"
 fragmentShaderPath = "raytracing.frag"
+
+
+class Material:
+    def __init__(self, color=None, lightCoefs=None, reflectionCoef=None, refractionCoef=None, materialType=None):
+        self.color = color
+        self.lightCoefs = lightCoefs
+        self.reflectionCoef = reflectionCoef
+        self.refractionCoef = refractionCoef
+        self.materialType = materialType
 
 
 # Процедура подготовки шейдера (тип шейдера, текст шейдера)
@@ -75,7 +87,7 @@ def init():
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
 
 
-def fillTriangleArrays(points, indexes):
+def fillTriangleArrays():
     # front
     points[0][0] = -5
     points[0][1] = 5
@@ -189,7 +201,10 @@ def fillTriangleArrays(points, indexes):
     indexes[12][3] = 6
 
 
-def initSpheres(spheres):
+spheres = np.zeros((2, 4))
+
+
+def initSpheres():
     spheres[0][0] = -1
     spheres[0][1] = -1
     spheres[0][2] = -2
@@ -201,26 +216,25 @@ def initSpheres(spheres):
 
 
 def setVec4BufferAsImage(array, unit):
-    #ptr = array.index(0)
+    glBegin(GL_QUAD_STRIP)
     py_id = glGenBuffers(1)  # typical way to generate a single index
-    c_id = ctypes.c_int()  # using ctypes to generate a second index
-    glGenBuffers(1, c_id)
-    buf = GLint()  # using GL wrapper to generate a third index
-    glGenBuffers(1, buf)
     glBindBuffer(GL_TEXTURE_BUFFER, py_id)
-    glBufferData(GL_TEXTURE_BUFFER, 200 * 4 * len(array), None, GL_STATIC_DRAW)
+    glBufferData(GL_TEXTURE_BUFFER, 2000 * 4 * len(array), array, GL_STATIC_DRAW)
     tex = glGenTextures(1)
     glBindTexture(GL_TEXTURE_BUFFER, tex)
-    glTexBuffer(GL_TEXTURE_BUFFER, sizeofRGBa32f, py_id)
-    glBindImageTexture(unit, tex, 0, False, 0, GL_READ_ONLY, sizeofRGBa32f)
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, py_id)
+    print(indexes)
+    glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
+
+
+points = np.zeros((11, 4), dtype = int)
+indexes = np.zeros((13, 4), dtype = int)
+material = [Material() for i in range(7)]
 
 
 def initSceneBuffers():
-    points = [[0 for j in range(4)] for i in range(11)]
-    indexes = [[0 for j in range(4)] for i in range(13)]
-    fillTriangleArrays(points, indexes)
-    spheres = [[0 for j in range(4)] for i in range(2)]
-    initSpheres(spheres)
+    fillTriangleArrays()
+    initSpheres()
 
     setVec4BufferAsImage(points, 2)
     setVec4BufferAsImage(indexes, 3)
@@ -228,56 +242,20 @@ def initSceneBuffers():
 
 
 def fillMaterials():
-    material = [[] for i in range(7)]
-    lightCoefs = [0.4, 0.9, 0.2, 2.0]
+    lightCoefs = np.array([0.4, 0.9, 0.2, 2.0])
+    spheresCoefs = np.array([0.4, 0.9, 0.9, 50.0])
 
-    material[0].append([0, 1, 0])
-    material[0].append(lightCoefs)
-    material[0].append(0.5)
-    material[0].append(1)
-    material[0].append(DIFFUSE_REFLECTION)
-
-    material[1].append([0, 0, 1])
-    material[1].append(lightCoefs)
-    material[1].append(0.5)
-    material[1].append(1)
-    material[1].append(DIFFUSE_REFLECTION)
-
-    material[2].append([0, 0.1, 0.8])
-    material[2].append(lightCoefs)
-    material[2].append(0.5)
-    material[2].append(1)
-    material[2].append(DIFFUSE_REFLECTION)
-
-    material[3].append([1, 0, 0])
-    material[3].append(lightCoefs)
-    material[3].append(0.5)
-    material[3].append(1)
-    material[3].append(DIFFUSE_REFLECTION)
-
-    material[4].append([1, 1, 1])
-    material[4].append(lightCoefs)
-    material[4].append(0.5)
-    material[4].append(1)
-    material[4].append(DIFFUSE_REFLECTION)
-
-    material[5].append([0, 1, 1])
-    material[5].append(lightCoefs)
-    material[5].append(0.5)
-    material[5].append(1)
-    material[5].append(DIFFUSE_REFLECTION)
-
-    material[6].append([0, 1, 1])
-    material[6].append([0.4, 0.9, 0.9, 50.0])
-    material[6].append(0.8)
-    material[6].append(1.5)
-    material[6].append(REFRACTION)
-
-    return material
+    material[0] = Material(np.array([0, 1, 0]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[1] = Material(np.array([0, 0, 1]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[2] = Material(np.array([0, 0.1, 0.8]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[3] = Material(np.array([1, 0, 0]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[4] = Material(np.array([1, 1, 1]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[5] = Material(np.array([0, 1, 1]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[6] = Material(np.array([0, 1, 1]), spheresCoefs, 0.8, 1.5, REFRACTION)
 
 
 def initMaterials():
-    material = fillMaterials()
+    fillMaterials()
     for i in range(len(material)):
         colorLocation = "uMaterials[" + str(i) + "].Color"
         lightCoefsLocation = "uMaterials[" + str(i) + "].LightCoeffs"
@@ -285,35 +263,36 @@ def initMaterials():
         refractionCoefsLocation = "uMaterials[" + str(i) + "].RefractionCoef"
         materialTypeLocation = "uMaterials[" + str(i) + "].MaterialType"
         location = glGetUniformLocation(program, colorLocation)
-        glUniform3f(location, material[i][0][0], material[i][0][1], material[i][0][2])
+        glUniform3f(location, material[i].color[0], material[i].color[1], material[i].color[2])
         location = glGetUniformLocation(program, lightCoefsLocation)
-        glUniform4f(location, material[i][1][0], material[i][1][1], material[i][1][2], material[i][1][3])
+        glUniform4f(location, material[i].lightCoefs[0], material[i].lightCoefs[1], material[i].lightCoefs[2], material[i].lightCoefs[3])
         location = glGetUniformLocation(program, reflectionCoefsLocation)
-        glUniform1f(location, material[i][2])
+        glUniform1f(location, material[i].reflectionCoef)
         location = glGetUniformLocation(program, refractionCoefsLocation)
-        glUniform1f(location, material[i][3])
+        glUniform1f(location, material[i].refractionCoef)
         location = glGetUniformLocation(program, materialTypeLocation)
-        glUniform1f(location, material[i][4])
+        glUniform1f(location, material[i].materialType)
 
 
 # Процедура перерисовки
 def draw():
+    glUseProgram(program)
     initMaterials()
     initSceneBuffers()
     location = glGetUniformLocation(program, "uCamera.Position")
-    glUniform3f(location, (0, 0, -7.5))
+    glUniform3f(location, 0, 0, -7.5)
     location = glGetUniformLocation(program, "uCamera.Up")
-    glUniform3f(location, (0, 1, 0))
+    glUniform3f(location, 0, 1, 0)
     location = glGetUniformLocation(program, "uCamera.Side")
-    glUniform3f(location, (1, 0, 0))
+    glUniform3f(location, 1, 0, 0)
     location = glGetUniformLocation(program, "uCamera.View")
-    glUniform3f(location, (0, 0, 1))
+    glUniform3f(location, 0, 0, 1)
     location = glGetUniformLocation(program, "uCamera.Scale")
-    glUniform2f(location, (1, height / weight))
+    glUniform2f(location, 1, height / weight)
     location = glGetUniformLocation(program, "uLight.Position")
-    glUniform3f(location, (2.0, 0.0, -4.0))
+    glUniform3f(location, 2.0, 0.0, -4.0)
 
-    glColor3b(0, 0, 0)
+    glClearColor(1, 1, 1, 0)
     glBegin(GL_QUADS)
 
     glTexCoord2f(0, 1)
@@ -328,15 +307,12 @@ def draw():
     glTexCoord2f(0, 0)
     glVertex2f(-1, 1)
 
-    glEnd()
-    glutSwapBuffers()
     glUseProgram(0)
+    glutSwapBuffers()
 
 
 # Здесь начинется выполнение программы
 init()
-# Создаем вершинный шейдер:
-# Положение вершин не меняется
-# Цвет вершины - такой же как и в массиве цветов
 initShaders()
 draw()
+glutMainLoop()
