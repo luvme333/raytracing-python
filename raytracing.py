@@ -2,7 +2,6 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 import numpy as np
 
-
 from OpenGL.version import *
 import chardet
 import sys
@@ -42,7 +41,6 @@ def loadShader(filename, shaderType):
     print(" ( ° ͜ʖ͡°)╭∩╮")
     glShaderSource(shader, shaderText)
     glCompileShader(shader)
-
     return shader
 
 
@@ -58,15 +56,16 @@ def initShaders():
     glLinkProgram(program)
     # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
     glUseProgram(program)
+    glEnable(GL_TEXTURE_2D)
 
 
 def init():
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
     # Указываем начальный размер окна (ширина, высота)
-    glutInitWindowSize(300, 300)
+    glutInitWindowSize(500, 500)
     # Указываем начальное
     # положение окна относительно левого верхнего угла экрана
-    glutInitWindowPosition(50, 50)
+    glutInitWindowPosition(500, 500)
     # Инициализация OpenGl
     glutInit(sys.argv)
     # Создаем окно с заголовком
@@ -216,7 +215,9 @@ def initSpheres():
 
 
 def setVec4BufferAsImage(array, unit):
-    glBegin(GL_QUAD_STRIP)
+    glEnable(GL_TEXTURE)
+    glBegin(GL_TEXTURE_2D)
+    ptr = array[0]
     py_id = glGenBuffers(1)  # typical way to generate a single index
     glBindBuffer(GL_TEXTURE_BUFFER, py_id)
     glBufferData(GL_TEXTURE_BUFFER, 2000 * 4 * len(array), array, GL_STATIC_DRAW)
@@ -224,11 +225,14 @@ def setVec4BufferAsImage(array, unit):
     glBindTexture(GL_TEXTURE_BUFFER, tex)
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, py_id)
     print(indexes)
-    glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
+    # разобраться
+    # glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, tex)
 
 
-points = np.zeros((11, 4), dtype = int)
-indexes = np.zeros((13, 4), dtype = int)
+points = np.zeros((11, 4), dtype=int)
+indexes = np.zeros((13, 4), dtype=int)
 material = [Material() for i in range(7)]
 
 
@@ -263,9 +267,11 @@ def initMaterials():
         refractionCoefsLocation = "uMaterials[" + str(i) + "].RefractionCoef"
         materialTypeLocation = "uMaterials[" + str(i) + "].MaterialType"
         location = glGetUniformLocation(program, colorLocation)
+        # надо векторы, модуль scientific
         glUniform3f(location, material[i].color[0], material[i].color[1], material[i].color[2])
         location = glGetUniformLocation(program, lightCoefsLocation)
-        glUniform4f(location, material[i].lightCoefs[0], material[i].lightCoefs[1], material[i].lightCoefs[2], material[i].lightCoefs[3])
+        glUniform4f(location, material[i].lightCoefs[0], material[i].lightCoefs[1], material[i].lightCoefs[2],
+                    material[i].lightCoefs[3])
         location = glGetUniformLocation(program, reflectionCoefsLocation)
         glUniform1f(location, material[i].reflectionCoef)
         location = glGetUniformLocation(program, refractionCoefsLocation)
