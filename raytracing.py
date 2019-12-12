@@ -276,6 +276,7 @@ def initMaterials():
         refractionCoefsLocation = "uMaterials[" + str(i) + "].RefractionCoef"
         materialTypeLocation = "uMaterials[" + str(i) + "].MaterialType"
         location = glGetUniformLocation(program, colorLocation)
+        print(location)
         # надо векторы, модуль scientific
         glUniform3f(location, material[i].color[0], material[i].color[1], material[i].color[2])
         location = glGetUniformLocation(program, lightCoefsLocation)
@@ -286,15 +287,10 @@ def initMaterials():
         location = glGetUniformLocation(program, refractionCoefsLocation)
         glUniform1f(location, material[i].refractionCoef)
         location = glGetUniformLocation(program, materialTypeLocation)
-        glUniform1f(location, material[i].materialType)
+        glUniform1i(location, material[i].materialType)
 
-
-# Процедура перерисовки
-def draw():
-
-    initMaterials()
-    initSceneBuffers()
-    location = GLint(glGetUniformLocation(program, "uCamera.Position"))
+def initCamera():
+    location = glGetUniformLocation(program, "uCamera.Position")
     glUniform3f(location, 0, 0, -7.5)
     location = glGetUniformLocation(program, "uCamera.Up")
     glUniform3f(location, 0, 1, 0)
@@ -306,6 +302,11 @@ def draw():
     glUniform2f(location, 1, height / weight)
     location = glGetUniformLocation(program, "uLight.Position")
     glUniform3f(location, 2.0, 0.0, -4.0)
+
+# Процедура перерисовки
+def draw():
+
+    initSceneBuffers()
 
     glClearColor(1, 1, 1, 0)
     glBegin(GL_QUADS)
@@ -357,6 +358,8 @@ glLinkProgram(program)
 # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
 glUseProgram(program)
 
+initMaterials()
+initCamera()
 glBegin(GL_QUADS)
 glEnable(GL_COLOR_MATERIAL)
 glShadeModel(GL_SMOOTH)
