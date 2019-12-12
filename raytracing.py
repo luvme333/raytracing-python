@@ -1,18 +1,13 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
+from OpenGL import *
 import numpy as np
 
 from OpenGL.version import *
 import chardet
 import sys
 
-# объявляем массив pointcolor глобальным (будет доступен во всей программе)
-global pointcolor
-global vertexShaderPath
-global fragmentShaderPath
-global vertexShader
-global fragmentShader
-program = 0
+
 global sizeofRGBa32f
 DIFFUSE_REFLECTION = 1
 MIRROR_REFLECTION = 2
@@ -43,11 +38,11 @@ def loadShader(filename, shaderType):
     glCompileShader(shader)
     return shader
 
-
 def initShaders():
     vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
     fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
     program = glCreateProgram()
+    print(program)
     # Приcоединяем вершинный шейдер к программе
     glAttachShader(program, vertexShader)
     # Присоединяем фрагментный шейдер к программе
@@ -76,6 +71,19 @@ def init():
     glutIdleFunc(draw)
     # Задаем серый цвет для очистки экрана
     glClearColor(0.2, 0.2, 0.2, 1)
+    vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
+    fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
+    program = glCreateProgram()
+    print(program)
+    # Приcоединяем вершинный шейдер к программе
+    glAttachShader(program, vertexShader)
+    # Присоединяем фрагментный шейдер к программе
+    glAttachShader(program, fragmentShader)
+    # "Собираем" шейдерную программу
+    glLinkProgram(program)
+    # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
+    glUseProgram(program)
+
     glBegin(GL_QUADS)
     glEnable(GL_COLOR_MATERIAL)
     glShadeModel(GL_SMOOTH)
@@ -224,11 +232,12 @@ def setVec4BufferAsImage(array, unit):
     tex = glGenTextures(1)
     glBindTexture(GL_TEXTURE_BUFFER, tex)
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, py_id)
-    print(indexes)
+
     # разобраться
-    # glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
+    #glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, tex)
+    
 
 
 points = np.zeros((11, 4), dtype=int)
@@ -282,10 +291,10 @@ def initMaterials():
 
 # Процедура перерисовки
 def draw():
-    glUseProgram(program)
+
     initMaterials()
     initSceneBuffers()
-    location = glGetUniformLocation(program, "uCamera.Position")
+    location = GLint(glGetUniformLocation(program, "uCamera.Position"))
     glUniform3f(location, 0, 0, -7.5)
     location = glGetUniformLocation(program, "uCamera.Up")
     glUniform3f(location, 0, 1, 0)
@@ -318,7 +327,43 @@ def draw():
 
 
 # Здесь начинется выполнение программы
-init()
-initShaders()
-draw()
+
+glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
+# Указываем начальный размер окна (ширина, высота)
+glutInitWindowSize(500, 500)
+# Указываем начальное
+# положение окна относительно левого верхнего угла экрана
+glutInitWindowPosition(500, 500)
+# Инициализация OpenGl
+glutInit(sys.argv)
+# Создаем окно с заголовком
+glutCreateWindow("Raytracing")
+# Определяем процедуру, отвечающую за перерисовку
+glutDisplayFunc(draw)
+# Определяем процедуру, выполняющуюся при "простое" программы
+glutIdleFunc(draw)
+# Задаем серый цвет для очистки экрана
+glClearColor(0.2, 0.2, 0.2, 1)
+vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
+fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
+program = glCreateProgram()
+print(program)
+# Приcоединяем вершинный шейдер к программе
+glAttachShader(program, vertexShader)
+# Присоединяем фрагментный шейдер к программе
+glAttachShader(program, fragmentShader)
+# "Собираем" шейдерную программу
+glLinkProgram(program)
+# Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
+glUseProgram(program)
+
+glBegin(GL_QUADS)
+glEnable(GL_COLOR_MATERIAL)
+glShadeModel(GL_SMOOTH)
+glEnable(GL_DEPTH_TEST)
+glEnable(GL_CULL_FACE)
+glEnable(GL_LIGHT0)
+glEnable(GL_LIGHTING)
+glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+
 glutMainLoop()
