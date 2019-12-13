@@ -1,6 +1,6 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-from OpenGL import *
+
 import numpy as np
 
 from OpenGL.version import *
@@ -223,20 +223,15 @@ def initSpheres():
 
 
 def setVec4BufferAsImage(array, unit):
-    glEnable(GL_TEXTURE)
-    glBegin(GL_TEXTURE_2D)
-    ptr = array[0]
+    ptr = np.where(array == 0)
     py_id = glGenBuffers(1)  # typical way to generate a single index
     glBindBuffer(GL_TEXTURE_BUFFER, py_id)
-    glBufferData(GL_TEXTURE_BUFFER, 2000 * 4 * len(array), array, GL_STATIC_DRAW)
+    glBufferData(GL_TEXTURE_BUFFER, sys.float_info.__sizeof__() * 4 * len(array), array[0], GL_STATIC_DRAW)
     tex = glGenTextures(1)
     glBindTexture(GL_TEXTURE_BUFFER, tex)
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, py_id)
-
     # разобраться
-    #glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, tex)
+    glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
     
 
 
@@ -255,20 +250,21 @@ def initSceneBuffers():
 
 
 def fillMaterials():
-    lightCoefs = np.array([0.4, 0.9, 0.2, 2.0])
-    spheresCoefs = np.array([0.4, 0.9, 0.9, 50.0])
+    lightCoefs = [0.4, 0.9, 0.2, 2.0]
+    spheresCoefs = [0.4, 0.9, 0.9, 50.0]
 
-    material[0] = Material(np.array([0, 1, 0]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
-    material[1] = Material(np.array([0, 0, 1]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
-    material[2] = Material(np.array([0, 0.1, 0.8]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
-    material[3] = Material(np.array([1, 0, 0]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
-    material[4] = Material(np.array([1, 1, 1]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
-    material[5] = Material(np.array([0, 1, 1]), lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
-    material[6] = Material(np.array([0, 1, 1]), spheresCoefs, 0.8, 1.5, REFRACTION)
+    material[0] = Material([0, 1, 0], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[1] = Material([0, 0, 1], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[2] = Material([0, 0.1, 0.8], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[3] = Material([1, 0, 0], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[4] = Material([1, 1, 1], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[5] = Material([0, 1, 1], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[6] = Material([0, 1, 1], spheresCoefs, 0.8, 1.5, REFRACTION)
 
 
 def initMaterials():
     fillMaterials()
+
     for i in range(len(material)):
         colorLocation = "uMaterials[" + str(i) + "].Color"
         lightCoefsLocation = "uMaterials[" + str(i) + "].LightCoeffs"
@@ -276,18 +272,15 @@ def initMaterials():
         refractionCoefsLocation = "uMaterials[" + str(i) + "].RefractionCoef"
         materialTypeLocation = "uMaterials[" + str(i) + "].MaterialType"
         location = glGetUniformLocation(program, colorLocation)
-        print(location)
-        # надо векторы, модуль scientific
-        glUniform3f(location, material[i].color[0], material[i].color[1], material[i].color[2])
+        glUniform3fv(location, 1, material[i].color)
         location = glGetUniformLocation(program, lightCoefsLocation)
-        glUniform4f(location, material[i].lightCoefs[0], material[i].lightCoefs[1], material[i].lightCoefs[2],
-                    material[i].lightCoefs[3])
+        glUniform4fv(location, 1, material[i].lightCoefs)
         location = glGetUniformLocation(program, reflectionCoefsLocation)
-        glUniform1f(location, material[i].reflectionCoef)
+        glUniform1fv(location, 1, material[i].reflectionCoef)
         location = glGetUniformLocation(program, refractionCoefsLocation)
-        glUniform1f(location, material[i].refractionCoef)
+        glUniform1fv(location, 1, material[i].refractionCoef)
         location = glGetUniformLocation(program, materialTypeLocation)
-        glUniform1i(location, material[i].materialType)
+        glUniform1iv(location, 1, material[i].materialType)
 
 def initCamera():
     location = glGetUniformLocation(program, "uCamera.Position")
@@ -305,11 +298,7 @@ def initCamera():
 
 # Процедура перерисовки
 def draw():
-
-    initSceneBuffers()
-
     glClearColor(1, 1, 1, 0)
-    glBegin(GL_QUADS)
 
     glTexCoord2f(0, 1)
     glVertex2f(-1, -1)
@@ -323,7 +312,6 @@ def draw():
     glTexCoord2f(0, 0)
     glVertex2f(-1, 1)
 
-    glUseProgram(0)
     glutSwapBuffers()
 
 
@@ -360,7 +348,8 @@ glUseProgram(program)
 
 initMaterials()
 initCamera()
-glBegin(GL_QUADS)
+initSceneBuffers()
+
 glEnable(GL_COLOR_MATERIAL)
 glShadeModel(GL_SMOOTH)
 glEnable(GL_DEPTH_TEST)
