@@ -2,7 +2,7 @@
 /*************************************************************************************************/
 /*                        Vertex Shader for Implicity Surface Ray Tracing                        */	
 /*************************************************************************************************/
-in vec3 vPosition; //Входные переменные vPosition - позиция вершины
+in vec3 vPosition; 
 // out vec3 origin, direction;
 out vec3 glPosition; 
 

@@ -7,7 +7,6 @@ from OpenGL.version import *
 import chardet
 import sys
 
-
 global sizeofRGBa32f
 DIFFUSE_REFLECTION = 1
 MIRROR_REFLECTION = 2
@@ -37,61 +36,6 @@ def loadShader(filename, shaderType):
     glShaderSource(shader, shaderText)
     glCompileShader(shader)
     return shader
-
-def initShaders():
-    vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
-    fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
-    program = glCreateProgram()
-    print(program)
-    # Приcоединяем вершинный шейдер к программе
-    glAttachShader(program, vertexShader)
-    # Присоединяем фрагментный шейдер к программе
-    glAttachShader(program, fragmentShader)
-    # "Собираем" шейдерную программу
-    glLinkProgram(program)
-    # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
-    glUseProgram(program)
-    glEnable(GL_TEXTURE_2D)
-
-
-def init():
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
-    # Указываем начальный размер окна (ширина, высота)
-    glutInitWindowSize(500, 500)
-    # Указываем начальное
-    # положение окна относительно левого верхнего угла экрана
-    glutInitWindowPosition(500, 500)
-    # Инициализация OpenGl
-    glutInit(sys.argv)
-    # Создаем окно с заголовком
-    glutCreateWindow("Raytracing")
-    # Определяем процедуру, отвечающую за перерисовку
-    glutDisplayFunc(draw)
-    # Определяем процедуру, выполняющуюся при "простое" программы
-    glutIdleFunc(draw)
-    # Задаем серый цвет для очистки экрана
-    glClearColor(0.2, 0.2, 0.2, 1)
-    vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
-    fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
-    program = glCreateProgram()
-    print(program)
-    # Приcоединяем вершинный шейдер к программе
-    glAttachShader(program, vertexShader)
-    # Присоединяем фрагментный шейдер к программе
-    glAttachShader(program, fragmentShader)
-    # "Собираем" шейдерную программу
-    glLinkProgram(program)
-    # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
-    glUseProgram(program)
-
-    glBegin(GL_QUADS)
-    glEnable(GL_COLOR_MATERIAL)
-    glShadeModel(GL_SMOOTH)
-    glEnable(GL_DEPTH_TEST)
-    glEnable(GL_CULL_FACE)
-    glEnable(GL_LIGHT0)
-    glEnable(GL_LIGHTING)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
 
 
 def fillTriangleArrays():
@@ -223,16 +167,14 @@ def initSpheres():
 
 
 def setVec4BufferAsImage(array, unit):
-    ptr = np.where(array == 0)
     py_id = glGenBuffers(1)  # typical way to generate a single index
     glBindBuffer(GL_TEXTURE_BUFFER, py_id)
-    glBufferData(GL_TEXTURE_BUFFER, sys.float_info.__sizeof__() * 4 * len(array), array[0], GL_STATIC_DRAW)
+    glBufferData(GL_TEXTURE_BUFFER, 16 * len(array), array, GL_STATIC_DRAW)
     tex = glGenTextures(1)
     glBindTexture(GL_TEXTURE_BUFFER, tex)
+    print(glBindTexture(GL_TEXTURE_BUFFER, tex))
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, py_id)
-    # разобраться
     glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
-    
 
 
 points = np.zeros((11, 4), dtype=int)
@@ -276,29 +218,35 @@ def initMaterials():
         location = glGetUniformLocation(program, lightCoefsLocation)
         glUniform4fv(location, 1, material[i].lightCoefs)
         location = glGetUniformLocation(program, reflectionCoefsLocation)
-        glUniform1fv(location, 1, material[i].reflectionCoef)
+        glUniform1f(location,  material[i].reflectionCoef)
         location = glGetUniformLocation(program, refractionCoefsLocation)
-        glUniform1fv(location, 1, material[i].refractionCoef)
+        glUniform1f(location, material[i].refractionCoef)
         location = glGetUniformLocation(program, materialTypeLocation)
-        glUniform1iv(location, 1, material[i].materialType)
+        glUniform1i(location, material[i].materialType)
+
 
 def initCamera():
     location = glGetUniformLocation(program, "uCamera.Position")
-    glUniform3f(location, 0, 0, -7.5)
+    glUniform3fv(location, 1, [0, 0, -7.5])
     location = glGetUniformLocation(program, "uCamera.Up")
-    glUniform3f(location, 0, 1, 0)
+    glUniform3fv(location, 1, [0, 1, 0])
     location = glGetUniformLocation(program, "uCamera.Side")
-    glUniform3f(location, 1, 0, 0)
+    glUniform3fv(location, 1, [1, 0, 0])
     location = glGetUniformLocation(program, "uCamera.View")
-    glUniform3f(location, 0, 0, 1)
+    glUniform3fv(location, 1, [0, 0, 1])
     location = glGetUniformLocation(program, "uCamera.Scale")
-    glUniform2f(location, 1, height / weight)
+    glUniform2fv(location, 1, [1, height / weight])
     location = glGetUniformLocation(program, "uLight.Position")
-    glUniform3f(location, 2.0, 0.0, -4.0)
+    glUniform3fv(location, 1, [2.0, 0.0, -4.0])
+
 
 # Процедура перерисовки
 def draw():
-    glClearColor(1, 1, 1, 0)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+
+    glColor3f(255, 255, 255)
+    glBegin(GL_QUADS)
 
     glTexCoord2f(0, 1)
     glVertex2f(-1, -1)
@@ -312,12 +260,14 @@ def draw():
     glTexCoord2f(0, 0)
     glVertex2f(-1, 1)
 
+    glEnd
     glutSwapBuffers()
+    glUseProgram(0)
 
 
 # Здесь начинется выполнение программы
 
-glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
+glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
 # Указываем начальный размер окна (ширина, высота)
 glutInitWindowSize(500, 500)
 # Указываем начальное
@@ -330,13 +280,12 @@ glutCreateWindow("Raytracing")
 # Определяем процедуру, отвечающую за перерисовку
 glutDisplayFunc(draw)
 # Определяем процедуру, выполняющуюся при "простое" программы
-glutIdleFunc(draw)
+
 # Задаем серый цвет для очистки экрана
 glClearColor(0.2, 0.2, 0.2, 1)
 vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
 fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
 program = glCreateProgram()
-print(program)
 # Приcоединяем вершинный шейдер к программе
 glAttachShader(program, vertexShader)
 # Присоединяем фрагментный шейдер к программе
@@ -345,17 +294,16 @@ glAttachShader(program, fragmentShader)
 glLinkProgram(program)
 # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
 glUseProgram(program)
-
-initMaterials()
-initCamera()
-initSceneBuffers()
-
 glEnable(GL_COLOR_MATERIAL)
 glShadeModel(GL_SMOOTH)
 glEnable(GL_DEPTH_TEST)
 glEnable(GL_CULL_FACE)
 glEnable(GL_LIGHT0)
 glEnable(GL_LIGHTING)
-glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+initMaterials()
+initCamera()
+initSceneBuffers()
+
+
 
 glutMainLoop()

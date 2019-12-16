@@ -166,12 +166,7 @@ bool IntersectSphere ( SSphere sphere, SRay ray, float start, float final, out f
 
 bool RayTriangleIntersection(SRay ray, vec3 v1, vec3 v2, vec3 v3, out float time )
 {
-    // // Compute the intersection of ray with a triangle using geometric solution 
-	// Input: // points v0, v1, v2 are the triangle's vertices 
-	// rayOrig and rayDir are the ray's origin (point) and the ray's direction 
-	// Return: // return true is the ray intersects the triangle, false otherwise 
-	// bool intersectTriangle(point v0, point v1, point v2, point rayOrig, vector rayDir) { 
-	// compute plane's normal vector 
+
 	time = -1;
     vec3 A = v2 - v1;
     vec3 B = v3 - v1;
@@ -345,8 +340,6 @@ float Fresnel(const vec3 I, const vec3 N, const float ior)
         return kr = (Rs * Rs + Rp * Rp) / 2;
     }
 
-// As a consequence of the conservation of energy, transmittance is given by:
-// kt = 1 - kr;
 } 
 
 /* ENTRY POINT *****************************************************/
@@ -436,7 +429,7 @@ void main ( void )
                     STracingRay refractRay = STracingRay(SRay(refractionRayOrig, refractionDirection), sray.contribution * kr, sray.depth + 1);
                     pushRay(refractRay);
                }
-		
+
 			//	vec3 reflectionDirection = normalize(reflect(ray.Direction, intersect.Normal));
             //  vec3 reflectionRayOrig = outside ? intersect.Point + bias : intersect.Point - bias;
             //  STracingRay reflectionRay = STracingRay(SRay(reflectionRayOrig, reflectionDirection), sray.contribution * (1 - kr), sray.depth + 1);
@@ -444,10 +437,8 @@ void main ( void )
 			//	break;
             }
 			} // case
-			} //  if (Raytrace(ray, start, final, intersect)) 
+			} //  if (Raytrace(ray, start, final, intersect))
 		} // while(!isEmpty())
 
 	FragColor = vec4 ( resultColor, 1.0 );
 }
-
-
