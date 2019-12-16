@@ -1,79 +1,39 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-#import sys
-# Из модуля random импортируем одноименную функцию random
-from random import random
-# объявляем массив pointcolor глобальным (будет доступен во всей программе)
-global pointcolor
-global vertexShaderPath 
-global fragmentShaderPath
-global vertexShader
-global fragmentShader
-global program
-global sizeofRGBa32f
-sizeofRGBa32f = 34836
+
+import numpy as np
+import sys
+
+
+DIFFUSE_REFLECTION = 1
+MIRROR_REFLECTION = 2
+REFRACTION = 3
+height = 500
+weight = 500
 vertexShaderPath = "raytracing.vert"
 fragmentShaderPath = "raytracing.frag"
 
 
-# Процедура подготовки шейдера (тип шейдера, текст шейдера)
+class Material:
+    def __init__(self, color=None, lightCoefs=None, reflectionCoef=None, refractionCoef=None, materialType=None):
+        self.color = color
+        self.lightCoefs = lightCoefs
+        self.reflectionCoef = reflectionCoef
+        self.refractionCoef = refractionCoef
+        self.materialType = materialType
+
+
+# Процедура подготовки шейдера (путь к файлу, тип шейдера)
 def loadShader(filename, shaderType):
     shader = glCreateShader(shaderType)
     with open(filename) as file:
         shaderText = file.read()
-    print(" ( ° ͜ʖ͡°)╭∩╮")
     glShaderSource(shader, shaderText)
     glCompileShader(shader)
-    
     return shader
 
-def initShaders():
-    vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
-    fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
-    program = glCreateProgram()
-    # Приcоединяем вершинный шейдер к программе
-    glAttachShader(program, vertexShader)
-    # Присоединяем фрагментный шейдер к программе
-    glAttachShader(program, fragmentShader)
-    # "Собираем" шейдерную программу
-    glLinkProgram(program)
-    # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
-    glUseProgram(program)
 
-# Процедура перерисовки
-def draw():
-    glClear(GL_COLOR_BUFFER_BIT)                    # Очищаем экран и заливаем серым цветом
-    glEnableClientState(GL_VERTEX_ARRAY)            # Включаем использование массива вершин
-    glEnableClientState(GL_COLOR_ARRAY)             # Включаем использование массива цветов
-    # Указываем, где взять массив верши:
-    # Первый параметр - сколько используется координат на одну вершину
-    # Второй параметр - определяем тип данных для каждой координаты вершины
-    # Третий парметр - определяет смещение между вершинами в массиве
-    # Если вершины идут одна за другой, то смещение 0
-    # Четвертый параметр - указатель на первую координату первой вершины в массиве
-    glVertexPointer(3, GL_FLOAT, 0, pointdata)
-    # Указываем, где взять массив цветов:
-    # Параметры аналогичны, но указывается массив цветов
-    glColorPointer(3, GL_FLOAT, 0, pointcolor)
-    # Рисуем данные массивов за один проход:
-    # Первый параметр - какой тип примитивов использовать (треугольники, точки, линии и др.)
-    # Второй параметр - начальный индекс в указанных массивах
-    # Третий параметр - количество рисуемых объектов (в нашем случае это 3 вершины - 9 координат)
-    glDrawArrays(GL_TRIANGLES, 0, 3)
-    glDisableClientState(GL_VERTEX_ARRAY)           # Отключаем использование массива вершин
-    glDisableClientState(GL_COLOR_ARRAY)            # Отключаем использование массива цветов
-    glutSwapBuffers()                               # Выводим все нарисованное в памяти на экран
-
-def init():
-    glEnable(GL_COLOR_MATERIAL)
-    glShadeModel(GL_SMOOTH)
-    glEnable(GL_DEPTH_TEST)
-    glEnable(GL_CULL_FACE)
-    glEnable(GL_LIGHT0)
-    glEnable(GL_LIGHTING)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
-
-def fillTriangleArrays(points, indexes):
+def fillTriangleArrays():
     # front
     points[0][0] = -5
     points[0][1] = 5
@@ -186,66 +146,156 @@ def fillTriangleArrays(points, indexes):
     indexes[12][2] = 9
     indexes[12][3] = 6
 
-def initSpheres(spheres):
-    spheres[0] [0] = -1
-    spheres[0] [1] = -1
-    spheres[0] [2] = -2
-    spheres[0] [3] = 2
-    spheres[1] [0] = 2
-    spheres[1] [1] = 1
-    spheres[1] [2] = 2
-    spheres[1] [3] = 1
 
-def setVec4BufferAsImage(array, bufferUsageHint, unit):
-    ptr = array.index(0)
-    buf = glGenBuffers()
-    glBindBuffer(GL_TEXTURE_BUFFER, buf)
-    glBufferData(GL_TEXTURE_BUFFER, sizeof(float) * 4 * len(array), ptr, GL_STATIC_DRAW)
-    tex = glBindTexture()
+spheres = np.zeros((2, 4))
+
+
+def initSpheres():
+    spheres[0][0] = -1
+    spheres[0][1] = -1
+    spheres[0][2] = -2
+    spheres[0][3] = 2
+    spheres[1][0] = 2
+    spheres[1][1] = 1
+    spheres[1][2] = 2
+    spheres[1][3] = 1
+
+
+def setVec4BufferAsImage(array, unit):
+    py_id = glGenBuffers(1)
+    glBindBuffer(GL_TEXTURE_BUFFER, py_id)
+    glBufferData(GL_TEXTURE_BUFFER, 16 * len(array), array, GL_STATIC_DRAW)
+    tex = glGenTextures(1)
     glBindTexture(GL_TEXTURE_BUFFER, tex)
-    glTexBuffer(GL_TEXTURE_BUFFER, sizeofRGBa32f, buf)
-    glBindImageTexture(unit, tex, 0, False, 0, GL_READ_ONLY, sizeofRGBa32f)
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, py_id)
+    glBindImageTexture(unit, tex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
 
-    
+
+points = np.zeros((11, 4), dtype=int)
+indexes = np.zeros((13, 4), dtype=int)
+material = [Material() for i in range(7)]
+
+
 def initSceneBuffers():
-    points = [[0 for j in range(4)] for i in range(11)]
-    indexes = [[0 for j in range(4)] for i in range(13)]
-    fillTriangleArrays(points, indexes)
-    spheres = [[0 for j in range(4)] for i in range(2)]
-    initSpheres(spheres)
+    fillTriangleArrays()
+    initSpheres()
 
-    setVec4BufferAsImage(points, GL_STATIC_DRAW, 2)
-    setVec4BufferAsImage(indexes, GL_STATIC_DRAW, 3)
-    setVec4BufferAsImage(spheres, GL_STATIC_DRAW, 4)
+    setVec4BufferAsImage(points, 2)
+    setVec4BufferAsImage(indexes, 3)
+    setVec4BufferAsImage(spheres, 4)
+
+
+def fillMaterials():
+    lightCoefs = [0.4, 0.9, 0.2, 2.0]
+    spheresCoefs = [0.4, 0.9, 0.9, 50.0]
+
+    material[0] = Material([0, 1, 0], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[1] = Material([0, 0, 1], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[2] = Material([0, 0.1, 0.8], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[3] = Material([1, 0, 0], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[4] = Material([1, 1, 1], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[5] = Material([0, 1, 1], lightCoefs, 0.5, 1, DIFFUSE_REFLECTION)
+    material[6] = Material([0, 1, 1], spheresCoefs, 0.8, 1.5, REFRACTION)
+
+
+def initMaterials():
+    fillMaterials()
+
+    for i in range(len(material)):
+        colorLocation = "uMaterials[" + str(i) + "].Color"
+        lightCoefsLocation = "uMaterials[" + str(i) + "].LightCoeffs"
+        reflectionCoefsLocation = "uMaterials[" + str(i) + "].ReflectionCoef"
+        refractionCoefsLocation = "uMaterials[" + str(i) + "].RefractionCoef"
+        materialTypeLocation = "uMaterials[" + str(i) + "].MaterialType"
+        location = glGetUniformLocation(program, colorLocation)
+        glUniform3fv(location, 1, material[i].color)
+        location = glGetUniformLocation(program, lightCoefsLocation)
+        glUniform4fv(location, 1, material[i].lightCoefs)
+        location = glGetUniformLocation(program, reflectionCoefsLocation)
+        glUniform1f(location,  material[i].reflectionCoef)
+        location = glGetUniformLocation(program, refractionCoefsLocation)
+        glUniform1f(location, material[i].refractionCoef)
+        location = glGetUniformLocation(program, materialTypeLocation)
+        glUniform1i(location, material[i].materialType)
+
+
+def initCamera():
+    location = glGetUniformLocation(program, "uCamera.Position")
+    glUniform3fv(location, 1, [0, 0, -7.5])
+    location = glGetUniformLocation(program, "uCamera.Up")
+    glUniform3fv(location, 1, [0, 1, 0])
+    location = glGetUniformLocation(program, "uCamera.Side")
+    glUniform3fv(location, 1, [1, 0, 0])
+    location = glGetUniformLocation(program, "uCamera.View")
+    glUniform3fv(location, 1, [0, 0, 1])
+    location = glGetUniformLocation(program, "uCamera.Scale")
+    glUniform2fv(location, 1, [1, height / weight])
+    location = glGetUniformLocation(program, "uLight.Position")
+    glUniform3fv(location, 1, [2.0, 0.0, -4.0])
+
+
+# Процедура перерисовки
+def draw():
+    glColor3f(255, 255, 255)
+    glBegin(GL_QUADS)
+
+    glTexCoord2f(0, 1)
+    glVertex2f(-1, -1)
+
+    glTexCoord2f(1, 1)
+    glVertex2f(1, -1)
+
+    glTexCoord2f(1, 0)
+    glVertex2f(1, 1)
+
+    glTexCoord2f(0, 0)
+    glVertex2f(-1, 1)
+
+    glEnd
+    glutSwapBuffers()
+    glUseProgram(0)
+
 
 # Здесь начинется выполнение программы
-# Использовать двойную буферезацию и цвета в формате RGB (Красный Синий Зеленый)
-glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
+glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
 # Указываем начальный размер окна (ширина, высота)
-glutInitWindowSize(300, 300)
+glutInitWindowSize(height, weight)
 # Указываем начальное
 # положение окна относительно левого верхнего угла экрана
-glutInitWindowPosition(50, 50)
+glutInitWindowPosition(500, 500)
 # Инициализация OpenGl
 glutInit(sys.argv)
 # Создаем окно с заголовком
 glutCreateWindow("Raytracing")
-init()
 # Определяем процедуру, отвечающую за перерисовку
 glutDisplayFunc(draw)
-# Определяем процедуру, выполняющуюся при "простое" программы
-glutIdleFunc(draw)
 # Задаем серый цвет для очистки экрана
 glClearColor(0.2, 0.2, 0.2, 1)
-# Создаем вершинный шейдер:
-# Положение вершин не меняется
-# Цвет вершины - такой же как и в массиве цветов
-initShaders()
 
-# Определяем массив вершин (три вершины по три координаты)
-pointdata = [[0, 0.5, 0], [-0.5, -0.5, 0], [0.5, -0.5, 0]]
-# Определяем массив цветов (по одному цвету для каждой вершины)
-pointcolor = [[1, 1, 0], [0, 1, 1], [1, 0, 1]]
-# Запускаем основной цикл
-#print(glGetProgramInfoLog(program))
+glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+glEnable(GL_COLOR_MATERIAL)
+glShadeModel(GL_SMOOTH)
+glEnable(GL_DEPTH_TEST)
+glEnable(GL_CULL_FACE)
+glEnable(GL_LIGHT0)
+glEnable(GL_LIGHTING)
+
+#Подключение шейдеров к программе
+vertexShader = loadShader(vertexShaderPath, GL_VERTEX_SHADER)
+fragmentShader = loadShader(fragmentShaderPath, GL_FRAGMENT_SHADER)
+program = glCreateProgram()
+# Приcоединяем вершинный шейдер к программе
+glAttachShader(program, vertexShader)
+# Присоединяем фрагментный шейдер к программе
+glAttachShader(program, fragmentShader)
+# "Собираем" шейдерную программу
+glLinkProgram(program)
+# Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
+glUseProgram(program)
+
+initMaterials()
+initCamera()
+initSceneBuffers()
+
 glutMainLoop()

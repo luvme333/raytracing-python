@@ -237,7 +237,7 @@ vec3 Phong ( SIntersection intersect, SLight currLight, vec3 viewDirection, floa
     vec3 light = normalize ( currLight.Position - intersect.Point );
     vec3 view = normalize ( uCamera.Position - intersect.Point );
     float diffuse = max ( dot ( light, intersect.Normal ), 0.0 );
-    // или - viewDirection
+    // РёР»Рё - viewDirection
     vec3 reflected = reflect ( -view, intersect.Normal );
     float specular = pow ( max ( dot ( reflected, light ), 0.0 ), intersect.LightCoeffs.w );
     return intersect.LightCoeffs.x * intersect.Color +
